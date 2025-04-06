@@ -2,20 +2,238 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Luyện Nhớ Bài - 2 Lá</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bộ Bài Ghi Nhớ</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: linear-gradient(to right, #e0f7fa, #ffffff);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
+      color: #333;
+    }
+    h2, h3 {
+      color: #0077b6;
+    }
+    .card {
+      font-size: 2rem;
+      margin: 1rem 0;
+      text-align: center;
+      color: #023e8a;
+    }
+    .btn {
+      padding: 0.6rem 1.2rem;
+      margin: 0.5rem;
+      cursor: pointer;
+      font-size: 1rem;
+      background-color: #48cae4;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .btn:hover {
+      background-color: #0096c7;
+    }
+    input[type="text"] {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 300px;
+      margin: 0.5rem;
+    }
+    .hidden { display: none; }
+    #recall-section, #result-section { margin-top: 2rem; }
+    .mode-switch { margin-bottom: 1.5rem; }
+    #result-display p { margin: 0.3rem 0; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Luyện Nhớ 2 Lá</h1>
-        <button onclick="startPractice()">Bắt đầu luyện</button>
-        <div id="cardDisplay"></div>
-        <input type="text" id="userInput" placeholder="Nhập mã hóa ở đây..." />
-        <button onclick="checkAnswer()">Kiểm tra</button>
-        <div id="feedback"></div>
-        <div id="result"></div>
+  <div class="mode-switch">
+    <button class="btn" onclick="switchMode('practice')">🧠 Luyện tập</button>
+    <button class="btn" onclick="switchMode('test')">📝 Kiểm tra</button>
+  </div>
+
+  <div id="practice-mode">
+    <h2>Chế Độ Luyện Tập</h2>
+    <div class="card" id="practice-card-display"></div>
+    <input type="text" id="practice-input" placeholder="Nhập mã hóa..." onkeydown="if(event.key==='Enter')checkPractice()">
+    <button class="btn" onclick="checkPractice()">Kiểm tra</button>
+    <div id="practice-feedback"></div>
+  </div>
+
+  <div id="test-mode" class="hidden">
+    <h2>Chế Độ Kiểm Tra</h2>
+    <div id="test-section">
+      <div class="card" id="card-pair-display"></div>
+      <button class="btn" onclick="prevPair()">⬅️ Quay lại</button>
+      <button class="btn" onclick="nextPair()">➡️ Tiếp theo</button>
+      <button class="btn hidden" id="finish-btn" onclick="showRecallSection()">✅ Kết thúc</button>
     </div>
-    <script src="script.js"></script>
+
+    <div id="recall-section" class="hidden">
+      <h3>Nhập lại vị trí của cặp bài thứ <span id="recall-num"></span></h3>
+      <input type="text" id="recall-input" placeholder="Nhập tên 2 lá bài (ví dụ: J bích - 5 cơ)" onkeydown="if(event.key==='Enter')checkRecall()">
+      <button class="btn" onclick="checkRecall()">Tiếp tục</button>
+    </div>
+
+    <div id="result-section" class="hidden">
+      <h3>Kết quả kiểm tra</h3>
+      <p><strong>Thời gian hoàn thành:</strong> <span id="time-taken"></span></p>
+      <div id="result-display"></div>
+    </div>
+  </div>
+
+  <script>
+    const suitNames = {
+      '♠️': 'bích',
+      '♣️': 'tép',
+      '♦️': 'rô',
+      '♥️': 'cơ'
+    };
+
+    const fullDeck = [];
+    const suits = Object.keys(suitNames);
+    const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    suits.forEach(suit => {
+      ranks.forEach(rank => {
+        fullDeck.push(`${rank}${suit}`);
+      });
+    });
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // --- Luyện tập ---
+    let practiceIndex = 0;
+    const practiceCardPairs = shuffle([...fullDeck]);
+    const practiceCardDisplay = document.getElementById('practice-card-display');
+    const practiceInput = document.getElementById('practice-input');
+    const practiceFeedback = document.getElementById('practice-feedback');
+
+    function checkPractice() {
+      practiceIndex++;
+      if (practiceIndex < practiceCardPairs.length - 1) {
+        renderPractice();
+      } else {
+        practiceFeedback.textContent = "🎉 Hết bộ bài!";
+      }
+    }
+
+    function renderPractice() {
+      const c1 = practiceCardPairs[practiceIndex];
+      const c2 = practiceCardPairs[practiceIndex + 1];
+      practiceCardDisplay.textContent = `${c1} - ${c2}`;
+      practiceInput.value = '';
+      practiceInput.focus();
+    }
+
+    renderPractice();
+
+    // --- Kiểm tra ---
+    const cardPairs = [];
+    const shuffledDeck = shuffle([...fullDeck]);
+    for (let i = 0; i < shuffledDeck.length; i += 2) {
+      cardPairs.push([shuffledDeck[i], shuffledDeck[i + 1]]);
+    }
+
+    let currentPairIndex = 0;
+    const recallOrder = shuffle([...Array(cardPairs.length).keys()]);
+    let recallIndex = 0;
+
+    const cardPairDisplay = document.getElementById('card-pair-display');
+    const recallSection = document.getElementById('recall-section');
+    const resultSection = document.getElementById('result-section');
+    const recallNum = document.getElementById('recall-num');
+    const recallInput = document.getElementById('recall-input');
+    const resultDisplay = document.getElementById('result-display');
+    const finishBtn = document.getElementById('finish-btn');
+    const timeTaken = document.getElementById('time-taken');
+    const testSection = document.getElementById('test-section');
+
+    let testStartTime = Date.now();
+    let recallStartTime = 0;
+
+    function renderPair() {
+      cardPairDisplay.textContent = cardPairs[currentPairIndex].join(' - ');
+      finishBtn.classList.toggle('hidden', currentPairIndex < cardPairs.length - 2);
+    }
+
+    function nextPair() {
+      if (currentPairIndex < cardPairs.length - 1) {
+        currentPairIndex++;
+        renderPair();
+      }
+    }
+
+    function prevPair() {
+      if (currentPairIndex > 0) {
+        currentPairIndex--;
+        renderPair();
+      }
+    }
+
+    function showRecallSection() {
+      testSection.classList.add('hidden');
+      recallSection.classList.remove('hidden');
+      recallNum.textContent = recallOrder[recallIndex] + 1;
+      recallStartTime = Date.now();
+    }
+
+    const userAnswers = [];
+
+    function checkRecall() {
+      const userInput = recallInput.value.trim();
+      const correctPair = cardPairs[recallOrder[recallIndex]];
+      const correct = correctPair.map(card => `${card.slice(0, -2)} ${suitNames[card.slice(-2)]}`).join(' - ');
+
+      userAnswers.push({
+        index: recallOrder[recallIndex] + 1,
+        answer: userInput,
+        correct
+      });
+
+      recallIndex++;
+      recallInput.value = '';
+
+      if (recallIndex < recallOrder.length) {
+        recallNum.textContent = recallOrder[recallIndex] + 1;
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      recallSection.classList.add('hidden');
+      resultSection.classList.remove('hidden');
+
+      const totalTime = Math.floor((Date.now() - recallStartTime) / 1000);
+      const minutes = Math.floor(totalTime / 60);
+      const seconds = totalTime % 60;
+      timeTaken.textContent = `${minutes} phút ${seconds} giây`;
+
+      userAnswers.forEach(item => {
+        const p = document.createElement('p');
+        const ok = item.answer === item.correct ? '✅' : '❌';
+        p.textContent = `#${item.index}: Bạn nhập: ${item.answer} ${ok} | Đúng: ${item.correct}`;
+        resultDisplay.appendChild(p);
+      });
+    }
+
+    function switchMode(mode) {
+      document.getElementById('practice-mode').classList.toggle('hidden', mode !== 'practice');
+      document.getElementById('test-mode').classList.toggle('hidden', mode !== 'test');
+      if (mode === 'test') renderPair();
+    }
+  </script>
 </body>
 </html>
